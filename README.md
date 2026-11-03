@@ -73,7 +73,11 @@ sop-candidate fit --data data --trajectories .runs/provided_initials --output .r
 | 飞机部件检查 | `VerifyAircraftClearance`、`VerifyMechanicalComponents`、`VerifyElectricalSystems`、`CrossCheckSpecifications` 的结果有噪声；`ReportComponentIncident`、`ReportComponentMismatch`、`ReportCrossCheck` 返回已有的报告结论（无噪声）；`updateMaintenanceRecord` 记录维修记录 | `aircraft_ready`、`mechanical_inspection_result`、`electrical_inspection_result`、`cross_check_response`（`assessment`） |
 | 客服排障 | 按 SOP 顺序：`validateAccount` → `getAuthenticationDetails` → `createSessionAndOpenTicket` → `checkAccountStatus`；账户停用时先走付款分支 `transferAccountsPayable` → `checkPaymentStatus` → `checkAccountSuspensionStatus`；再 `checkServiceAreaOutage` → `performTechnicalDiagnostics`（诊断）→ `executeTroubleshooting`（排障）；最后 `updateTicket` 记录结论或 `createEscalation` 升级。诊断和排障给出的 `latency`、`jitter`、`bandwidth` 有噪声 | 这三项：`pre_repair`（诊断后）或 `post_repair`（排障后） |
 
-`mode` 决定读数来源：`default` 读主数据源，可能是缓存的旧记录；`refresh`、`remeasure` 重新读主数据源，同一来源的重复读数可能相关；`independent` 读第二个数据源，它与主数据源不一定相互独立。普通调用 0.01，有噪声工具的 `independent` 读数 0.03，oracle 每个字段 0.10，同一字段再读免费。每题预算 2.00、最多 24 次工具调用和 16 次 oracle；步骤顺序不对时返回 `phase_denied`。
+`mode` 决定读数来源：`default` 读主数据源，可能是缓存的旧记录；`refresh`、`remeasure` 重新读主数据源，同一来源的重复读数可能相关；`independent` 读第二个数据源，它与主数据源不一定相互独立。普通调用 0.01，有噪声工具的 `independent` 读数 0.03。同一题第 n 次成功的新 oracle 核验收费 `0.1 × n`：前三次分别为 0.1、0.2、0.3，累计 0.6；相同字段、相同 phase 的重复查询免费，不增加计费次数。失败或被拒绝的调用不收费。
+
+每题预算 2.00、最多 24 次工具调用和 16 次新 oracle 核验，同时受剩余预算限制。仅前六次 oracle 的累计费用就达到 2.1，因此实际不能完成六次新核验；已有工具费用也会占用预算。步骤顺序不对时返回 `phase_denied`。`episode["view"]["oracle_pricing"]` 和 history 的同名字段给出当前次数、基价及下一次新核验的价格；`view["costs"]["oracle"]` 是基价 0.1。baseline 会按递增价格和已有免费结果规划查询。
+
+本轮计费及大屏换算已更新为 `sop-uq-grades-v4`，以本 README 和考官 `/spec` 返回的规则为准；原始 PDF 文档保留供阅读题目与流程。
 
 有标签题可以不限次数地重新打开，每次都是新的练习，预算和调用次数重新计算。测试题中只有 72 道交互题可以继续调用工具和 oracle。读取测试题的 oracle 之前须先提交一次结果；本队第一次读取测试题 oracle 后，查询前风险 `p_initial_error` 的成绩锁定，后续提交仍可改善查询后风险和决策成绩。
 
@@ -92,9 +96,13 @@ sop-candidate fit --data data --trajectories .runs/provided_initials --output .r
 考官返回的 `report.grades` 包括三项百分制成绩和总成绩：
 
 - 初始风险：`100 × (1 − sqrt(B_p))`。
-- 查询后风险：分别换算 q 和 r 的 Brier 分数，再求平均。
+- 查询后风险：`clip(100 × (1 − (sqrt(B_q) + sqrt(B_r))/2 − ΔC), 0, 100)`。先分别换算 q 和 r 的 Brier 分数、求平均，再扣除新增调用费用，最低为 0 分。
 - 决策成绩：`clip(100 − 40 × (C − C_min) / (C_baseline − C_min), 0, 100)`；`C` 为业务域宏平均决策损失，`C_min = 377/7200`，`C_baseline = 5927/7200`。
 - 总成绩：三项等权平均，大屏取每位考生历史最高总成绩。
+
+`Δc_i` 是该题从冻结初始作答之后新增的工具和 oracle 费用；`ΔC` 先在每类业务的交互题中取平均，再对三类业务等权平均。当前每类 24 道交互题，所以 `ΔC` 等于 72 题新增费用之和除以 72。若 q/r 判断完全准确、每题新增费用均为 0.1，查询后风险成绩为 90 分。仅一道题花费 0.1 时，整项扣除约 0.1389 分。
+
+决策损失 `C` 继续包含冻结初始费用、新增调用费用和最终决策损失。同一笔调用只在账本中记录一次，第二、第三项都使用该记录计算各自的成绩。正式评分使用考官账本中的费用；每次有效提交将当时的费用汇总保存到 `report.query_costs`，之后继续查询不会把新的费用算回旧提交。重复上传同一 CSV 仍返回原提交结果。
 
 `report.grades` 返回截至该次提交的累计择优成绩：
 

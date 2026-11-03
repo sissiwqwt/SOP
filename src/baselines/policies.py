@@ -65,6 +65,36 @@ def _observed_values(history):
     return values
 
 
+def _affordable_queries(ordered, history, limit):
+    """Keep query order while budgeting new reads at the server's next prices."""
+    view = history["view"]
+    budget = view["remaining_budget"]
+    pricing = view.get("oracle_pricing", {})
+    if pricing.get("mode") != "linear":
+        # Older examiners advertise only a fixed oracle price.
+        price = view["costs"]["oracle"]
+        cap = min(len(ordered), int((budget + 1e-9) / price)) if price else len(ordered)
+        return ordered[: min(cap, limit)]
+    cached = {
+        (receipt["field"], receipt["phase"])
+        for receipt in history["receipts"]
+        if receipt.get("authority") == "exact_fact"
+    } if pricing.get("cached_reads_free", True) else set()
+    base = pricing["base_cost"]
+    next_cost = pricing["next_cost"]
+    plan = []
+    for query in ordered:
+        if len(plan) >= limit:
+            break
+        if query in cached:
+            plan.append(query)
+        elif next_cost <= budget + 1e-9:
+            plan.append(query)
+            budget -= next_cost
+            next_cost = round(next_cost + base, 8)
+    return plan
+
+
 def query_plan(policy, snapshot, history, *, p_initial, threshold=0.2, fixed_count=1):
     """Return the ordered oracle queries ``[(field, phase), ...]`` for one episode.
 
@@ -79,13 +109,10 @@ def query_plan(policy, snapshot, history, *, p_initial, threshold=0.2, fixed_cou
         policy == "active" and p_initial < threshold
     ):
         return []
-    budget = history["view"]["remaining_budget"]
-    price = history["view"]["costs"]["oracle"]
-    cap = min(len(legal), int((budget + 1e-9) / price)) if price else len(legal)
     if policy == "fixed":
-        return legal[: min(cap, fixed_count)]
+        return _affordable_queries(legal, history, fixed_count)
     if policy == "all_facts":
-        return legal[:cap]
+        return _affordable_queries(legal, history, len(legal))
     values = _observed_values(history)
 
     def score(query):
@@ -111,7 +138,7 @@ def query_plan(policy, snapshot, history, *, p_initial, threshold=0.2, fixed_cou
         )
         return (int(conflict), int(missing), spread)
 
-    return sorted(legal, key=score, reverse=True)[: min(cap, fixed_count)]
+    return _affordable_queries(sorted(legal, key=score, reverse=True), history, fixed_count)
 
 
 def final_mode(policy, p_final, threshold):
