@@ -1,0 +1,33 @@
+{
+  "dataset_release_id": "sop-uq-v2.1-dbd63b435b8f4e3696cdd39d85a7885a",
+  "schema_version": "2.1",
+  "model": "Qwen/Qwen3.5-9B",
+  "model_profile_hash": "29d1840b482abe375a2e82b472758801a63923c885df336d97cf18d9165889b7",
+  "seed": 0,
+  "files": {
+    "train/train.jsonl": {
+      "rows": 360,
+      "sha256": "526aa018adbc607b83723f17c9f45abdbbc7bae2f7c2f8c4ea4c80ec2a88c667"
+    },
+    "train/cal_fit.jsonl": {
+      "rows": 120,
+      "sha256": "fa4226ea630b0cafa228f8ac1de19cbf3f58f7c55cfff956f0de6c94061df258"
+    },
+    "train/cal_select.jsonl": {
+      "rows": 60,
+      "sha256": "786e04cbca3852edaa33baa1b33a52079350e7b8953a5cfbd00327dee0176b20"
+    },
+    "train/dev.jsonl": {
+      "rows": 120,
+      "sha256": "09f6e95ec452db26d5d1ba92dc40c2d28022f671969275abe06d952b4b98d028"
+    },
+    "test/cases.jsonl": {
+      "rows": 360,
+      "sha256": "212324f019ae78851f410b831e3ba2790f4bd6b4548d4ebbb4159d8e1dffb6b1"
+    },
+    "test/initial_M9.jsonl": {
+      "rows": 360,
+      "sha256": "1c33c16a93166c1385a531a052fe235aaf5f368cb0ff6dcbc105ec593a257036"
+    }
+  }
+}
