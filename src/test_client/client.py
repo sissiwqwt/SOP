@@ -93,9 +93,11 @@ class ExaminerClient(HTTPClient):
         """Upload a results.csv file; uses one try and returns its score report.
 
         With a trial token the file is only checked: no score, no try used.
-        Formal reports preserve raw metrics; ``report.grades`` contains the
-        cumulative ranking grades and ``report.submission_grades`` the grades
-        of this CSV alone. See the README for the selection and p-lock rules.
+        Formal reports preserve raw metrics. ``report.grades`` combines the
+        best eligible pre-oracle p grade with this submission's post-query and
+        decision grades. ``report.submission_grades`` contains the standalone
+        grades of this CSV, including its unadjusted p grade. See the README
+        for the selection and p-lock rules.
         """
         data = Path(path).read_text(encoding="utf-8-sig").encode("utf-8")
         return self.request("/submit", data, content_type="text/csv")
@@ -103,9 +105,10 @@ class ExaminerClient(HTTPClient):
     def submissions(self):
         """Saved reports and per-metric best tries; no submission quota is used.
 
-        Each report's ranking grades use only tries up to that report's number.
+        Each report uses its own post-query and decision grades, plus the best
+        eligible p grade from tries up to that report's number.
         ``best.problem1``/``best.problem2`` are the original raw-metric summaries,
-        separate from the cumulative ranking grades inside each report.
+        separate from the effective submission grades inside each report.
         """
         return self.request("/submissions")
 

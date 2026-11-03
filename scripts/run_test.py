@@ -3,7 +3,7 @@
 
     python scripts/run_test.py results.csv             # submit test results (uses one try)
     python scripts/run_test.py results.csv --local     # score train/dev results with public labels
-    python scripts/run_test.py --submissions           # list your scored tries and the best one
+    python scripts/run_test.py --submissions           # list scored tries and per-metric bests
 
 The examiner URL and token come from SOP_EXAMINER_URL and SOP_EXAMINER_TOKEN.
 Installing the package is not required.
@@ -92,7 +92,7 @@ def main(argv=None):
                 report = examiner.submissions()
                 for item in report["submissions"]:
                     print(f"try {item['submission']}: {item['primary']}")
-                print("best:", best_text(report["best"]))
+                print("raw-metric best:", best_text(report["best"]))
                 print(
                     "tries left:",
                     report["submissions_left"],
@@ -115,7 +115,7 @@ def main(argv=None):
                             f"tries left: {report['submissions_left']}"
                         )
                     print(summary(report["report"]))
-                    print("best so far:", best_text(report["best"]))
+                    print("raw-metric best:", best_text(report["best"]))
     except (ValueError, OSError, RemoteError) as error:
         parser.exit(1, f"run_test: {error}\n")
     if args.output:
