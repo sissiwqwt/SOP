@@ -1,51 +1,64 @@
 # SOP-UQ 学生项目
 
-先读 [题面](docs/problem_statement.pdf)，准备好环境和连接信息后，打开 [Quick Start Notebook](scripts/quick_start.ipynb) 按步骤运行。预算、提交、业务规则和评分细则见 [考生操作手册](docs/candidate_manual.pdf)。服务协议 **3.0**，主数据格式 **2.1**。
+项目介绍和操作说明见 [考生操作手册](docs/candidate_manual.pdf)。首次使用：准备好环境与连接信息，打开 [Quick Start Notebook](scripts/quick_start.ipynb)，用试用 token 跟着运行。
 
-## 安装与入口
+## 文档导航
 
-需要 conda（Miniconda、Miniforge 或 Anaconda）。在本仓库根目录的 bash 或 zsh 中（Windows 请用 WSL）：
+| 文档 | 什么时候看 |
+| --- | --- |
+| [题面](docs/problem_statement.pdf) | 了解任务定义、研究目标和需要提交的结果 |
+| [考生操作手册](docs/candidate_manual.pdf) | 查看项目介绍、正式操作步骤、CSV 格式、工具与预算、业务规则和评分细则 |
+| [Quick Start Notebook](scripts/quick_start.ipynb) | 实际连接服务、查看数据、运行基线，再走一遍采集、拟合和提交流程 |
+| [Baseline 示例](scripts/baseline_example.ipynb) | 跑通后，离线比较六种风险方法与转人工阈值；另附可选的模型部署说明 |
+
+## 准备环境与连接
+
+助教会提供五项连接信息：考官地址、试用 token、正式 token、模型地址、模型 token。已有模型 API 时直接连接即可，无需自行部署千问。
+
+使用 conda（Miniconda、Miniforge 或 Anaconda）时，在仓库根目录的 bash 或 zsh 中运行（Windows 请用 WSL）。将下面的占位文字替换为收到的完整地址和 token：
 
 ```bash
-source conda_env.sh   # 首次按 environment.yml 创建 conda 环境 sii_uq（几分钟），以后只激活
-export SOP_EXAMINER_URL=http://<考官地址>:8801   SOP_EXAMINER_TOKEN=<本队试用 token>
-export SOP_MODEL_URL=http://<模型地址>:18080      SOP_MODEL_TOKEN=<模型 token>
+source conda_env.sh   # 首次按 environment.yml 创建环境 sii_uq，以后只激活
+export SOP_EXAMINER_URL="助教提供的完整考官 URL"
+export SOP_EXAMINER_TOKEN="本队试用 token"
+export SOP_MODEL_URL="助教提供的完整模型 URL"
+export SOP_MODEL_TOKEN="模型 token"
 jupyter notebook scripts/quick_start.ipynb
 ```
 
-每队有两个 token：试用 token 用于跑 notebook 示例、熟悉流程（测试题上只能做少量工具调用和 oracle 读取，提交只检查格式、不评分、不占次数，也不影响正式台账）；正式 token 用于正式运行和提交。
+试用 token 用于熟悉流程，测试提交只检查格式，不评分、不占正式提交次数；正式 token 用于计分。用正式 token 跑示例会占用后续提交次数。正式运行步骤见操作手册。
 
-不用 conda 时需要 Python 3.11 及以上（Debian/Ubuntu 另装 `python3-venv`）：先 `python3 -m venv .venv && source .venv/bin/activate`，再 `python -m pip install -e "./src[notebook]"`。
+不用 conda 时，需要 Python 3.11 及以上（Debian/Ubuntu 另装 `python3-venv`）：
 
-| 入口 | 内容 |
-| --- | --- |
-| `scripts/quick_start.ipynb` | 快速上手教程：用试用 token 连接服务、查看数据、运行基线，再学习采集、拟合和提交流程 |
-| `scripts/baseline_example.ipynb` | 离线比较六种风险方法与转人工阈值；自行部署 Qwen |
-| `scripts/run_test.py` | 检查并提交 `results.csv`（`--local` 在本地为有标签结果评分，`--submissions` 查看已用次数） |
-| `sop-candidate` | 命令行：`collect`、`fit`、`run`、`score`、`submit` |
-| `src/test_client/` | 考官与模型客户端、`results.csv` 格式、评分规则 |
-| `src/baselines/` | agent、风险估计、查询/转人工策略、运行器；`resources/` 为各域 SOP 与工具 schema |
-| `src/qwen_server/` | 可选的模型服务；`profiles/` 为精确模型配置，`runtime.*.json` 为部署模板 |
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -e "./src[notebook]"
+```
+
+之后配置上面的连接信息并打开 Notebook。服务协议为 **3.0**，主数据格式为 **2.1**。
 
 ## 数据文件
 
-每个 `.jsonl` 按 UTF-8 编码，每行一个 JSON 对象。三类业务在每个划分中数量相等。
+JSONL 文件使用 UTF-8 编码，每行一个 JSON 对象；三类业务在每个划分中数量相等。
 
-| 文件（相对于 `data/`） | 行数 | 用途 |
+| 文件（相对于 `data/`） | 题数 | 用途 |
 | --- | ---: | --- |
 | `train/train.jsonl` | 360 | 学习风险模型、历史错误率 |
 | `train/cal_fit.jsonl` | 120 | 概率校准 |
-| `train/cal_select.jsonl` | 60 | 选择查询/转人工阈值 |
-| `train/dev.jsonl` | 120 | 练习、误差分析和调参 |
-| `test/cases.jsonl` | 360 | 测试输入，无标签；其中 72 题允许交互 |
-| `test/initial_M9.jsonl` | 360 | 考官冻结的初始轨迹：答案、自报风险、四次采样、工具历史与对话（所有队相同） |
+| `train/cal_select.jsonl` | 60 | 选择查询与转人工阈值 |
+| `train/dev.jsonl` | 120 | 验证、误差分析和调参 |
+| `test/cases.jsonl` | 360 | 无标签测试输入，其中 72 题允许交互 |
+| `test/initial_M9.jsonl` | 360 | 同一批测试题的冻结初始作答、四次采样、工具历史和对话 |
 | `manifest.json` | — | 数据批次、行数与 SHA-256 |
 
-有标签的 660 题已包含老师提供的 Qwen 初始作答：`case_id`、`domain`、`inputs`、`split`、`label`（标准答案）、`answer`（模型答案）、`p_error`、`samples`、`trajectory`（工具与模型记录）、`status` 和 `failure`。其中 659 条完成、1 条失败，失败记录也保留供风险估计使用。加载器兼容旧版 `training_split` 字段。
+前四份文件共 **660 道有标签练习题**，包含标准答案 `label` 和老师提供的 Qwen 初始作答 `answer`、风险、采样与轨迹，其中 659 条完成、1 条失败。
 
-`test/cases.jsonl` 含 `schema_version`、`dataset_release_id`、`case_id`、`domain`、`inputs`，不含标准答案。`test/initial_M9.jsonl` 每行一题：`answer`（冻结的初始答案，失败时为空）、`status`、`p_error`（自报风险）、`samples`（四次采样）、`history`（工具回执与模型输出）、`messages`（不含 system 消息的对话）和 `cost` 等。`dev` 中标准与偏移条件各半，测试同样；单题不标注条件。
+两份测试文件按 `case_id` 对应同一批 **360 道题**。冻结的初始作答是模型回答，**不是标准答案**；学生端不包含测试题的标准答案。`dev` 与测试题均包含一半标准条件、一半偏移条件，单题不标注条件。
 
-可以先离线查看数据，并用附带的初始作答拟合风险估计器，无需重新调用千问：
+### 可选：直接使用老师提供的初始作答
+
+Quick Start 演示完整采集流程。若希望省去重新生成初始作答，可以直接整理已有记录、拟合查询前风险：
 
 ```bash
 python data/view_data.py data/train/train.jsonl
@@ -53,74 +66,37 @@ python scripts/prepare_labeled.py
 sop-candidate fit --data data --trajectories .runs/provided_initials --output .runs/provided_calibrator.json
 ```
 
-上述记录只有查询前轨迹。需要训练查询后的风险模型时，仍需按 [Quick Start Notebook](scripts/quick_start.ipynb) 采集有标签题的查询后轨迹。
+这些记录只有查询前轨迹。需要训练查询后的风险模型时，仍按 Quick Start 第 5 节采集有标签题的查询后轨迹。
 
-| `domain` | 答案字段 |
+## 代码入口
+
+| 入口 | 用途 |
 | --- | --- |
-| `dangerous_goods` | `hazard_class` |
-| `aircraft_inspection` | `aircraft_ready`、`mechanical_inspection_result`、`electrical_inspection_result`、`component_incident_response`、`component_mismatch_response`、`cross_check_response`、`cross_check_reporting_response` |
-| `customer_service` | `final_resolution_status` |
+| `scripts/run_test.py` | 提交 CSV；`--local` 为有标签结果本地评分，`--submissions` 查看提交历史 |
+| `scripts/prepare_labeled.py` | 将随数据提供的初始作答导出为风险拟合所用的轨迹文件 |
+| `sop-candidate` | 命令行：`collect`、`fit`、`run`、`score`、`submit` |
+| `src/test_client/` | 考官与模型客户端、CSV 格式、评分规则 |
+| `src/baselines/` | agent、风险估计、查询与转人工策略、运行器 |
+| `src/baselines/resources/` | 各业务的 SOP、工具参数和 [业务规则](src/baselines/resources/business_rules.md) |
+| `src/qwen_server/` | 可选的模型服务；`profiles/` 和 `runtime.*.json` 为部署配置 |
 
-严格取值与业务边界见 `src/baselines/resources/business_rules.md`，工具参数见各域 `toolspecs.json`。
+## 提交与成绩
 
-## 工具与 oracle
+- 每份 `results.csv` 每道测试题一行。列名、填写要求和提交步骤见操作手册。
+- 每队最多 **5 次有效提交**。格式错误或重复提交同一已评分文件不占次数。
+- 初始风险取首次正式测试 oracle 查询之前的最佳 p 成绩。首次成功查询后，**p 不再更新，只更新 q/r 和决策成绩**。
+- q/r 和决策成绩使用本次提交的结果及当时费用；三项等权平均，最终取各次有效提交的最高总成绩。
+- 测试题的工具和 oracle 费用累计，换方法或重跑不会清零；有标签题可以重新打开练习。计费和评分细则见操作手册，考官 `/spec` 返回当前配置。
 
-`examiner.episode(case_id)` 打开一题，`examiner.tool(episode_id, name, arguments, mode)` 调用业务工具，`examiner.oracle(episode_id, field, phase)` 读取真值。每题可用的工具及参数见 `episode["view"]["tools"]`：各域 `toolspecs.json` 中的工具，外加 SOP 要求的业务动作（见各域 `amendment.txt`）。参数取自题目输入和此前的回执，流程见各域 `sop.txt`。
+学生向考官提交 CSV 后，成绩自动同步到大屏；大屏展示当次成绩和历史最高成绩。教师仍会结合细分指标、报告和答辩进行最终评价。
 
-| 业务 | 工具（有噪声的读数） | oracle 字段（phase） |
-| --- | --- | --- |
-| 危险品 | `calculate_sds_label_score`、`calculate_handling_score`、`calculate_transportation_score`、`calculate_disposal_score` 各给出一项评分，四项评分都有噪声 | `sds`、`handling`、`transportation`、`disposal`（`assessment`） |
-| 飞机部件检查 | `VerifyAircraftClearance`、`VerifyMechanicalComponents`、`VerifyElectricalSystems`、`CrossCheckSpecifications` 的结果有噪声；`ReportComponentIncident`、`ReportComponentMismatch`、`ReportCrossCheck` 返回已有的报告结论（无噪声）；`updateMaintenanceRecord` 记录维修记录 | `aircraft_ready`、`mechanical_inspection_result`、`electrical_inspection_result`、`cross_check_response`（`assessment`） |
-| 客服排障 | 按 SOP 顺序：`validateAccount` → `getAuthenticationDetails` → `createSessionAndOpenTicket` → `checkAccountStatus`；账户停用时先走付款分支 `transferAccountsPayable` → `checkPaymentStatus` → `checkAccountSuspensionStatus`；再 `checkServiceAreaOutage` → `performTechnicalDiagnostics`（诊断）→ `executeTroubleshooting`（排障）；最后 `updateTicket` 记录结论或 `createEscalation` 升级。诊断和排障给出的 `latency`、`jitter`、`bandwidth` 有噪声 | 这三项：`pre_repair`（诊断后）或 `post_repair`（排障后） |
+评分反馈用于评估方法，不得用来推断测试标签；试用 token 读到的测试真值只用于熟悉流程，不用于正式提交。
 
-`mode` 决定读数来源：`default` 读主数据源，可能是缓存的旧记录；`refresh`、`remeasure` 重新读主数据源，同一来源的重复读数可能相关；`independent` 读第二个数据源，它与主数据源不一定相互独立。普通调用 0.01，有噪声工具的 `independent` 读数 0.03。同一题第 n 次成功的新 oracle 核验收费 `0.1 × n`：前三次分别为 0.1、0.2、0.3，累计 0.6；相同字段、相同 phase 的重复查询免费，不增加计费次数。失败或被拒绝的调用不收费。
-
-每题预算 2.00、最多 24 次工具调用和 16 次新 oracle 核验，同时受剩余预算限制。仅前六次 oracle 的累计费用就达到 2.1，因此实际不能完成六次新核验；已有工具费用也会占用预算。步骤顺序不对时返回 `phase_denied`。`episode["view"]["oracle_pricing"]` 和 history 的同名字段给出当前次数、基价及下一次新核验的价格；`view["costs"]["oracle"]` 是基价 0.1。baseline 会按递增价格和已有免费结果规划查询。
-
-本轮计费及大屏换算已更新为 `sop-uq-grades-v5`，以本 README 和考官 `/spec` 返回的规则为准；原始 PDF 文档保留供阅读题目与流程。
-
-有标签题可以不限次数地重新打开，每次都是新的练习，预算和调用次数重新计算。测试题中只有 72 道交互题可以继续调用工具和 oracle。读取测试题的 oracle 之前须先提交一次结果；本队第一次读取测试题 oracle 后，查询前风险 `p_initial_error` 的成绩锁定，后续提交仍可改善查询后风险和决策成绩。
-
-## 结果与提交
-
-`results.csv` 每道测试题一行：`case_id, initial_answer_json, p_initial_error, mode, final_answer_json, p_initial_error_after_queries, p_final_error`。非交互题只填前三列；无答案或无概率时留空；初始答案必须是冻结答案。
-
-每队最多 5 次有效提交，每次立即返回完整评分；格式错误或与已评分文件完全相同的文件不占次数。原始报告的 `best.problem1` 记录首次正式测试 oracle 之前 p 的 Brier 最低的一次，`best.problem2` 记录所有提交中决策代价最低的一次；这两个字段用于比较细分指标，可以来自不同提交。每次提交的有效成绩按下节规则计算并同步到大屏。
-
-测试题的工具和 oracle 费用记在本队台账中，换方法或重跑不会清零，所以比较方法请在有标签题上进行。评分反馈只用于评估自己的方法，不得用来推断测试标签；试用 token 读到的测试题真值只用于熟悉流程，不得用于正式提交。
-
-最快的完整流程：`sop-candidate collect --policy fixed` 一次采集有标签题的初始与查询后轨迹，`sop-candidate fit` 拟合两类风险，`sop-candidate run --policy threshold` 生成问题 1 的测试结果并用 `python scripts/run_test.py` 提交，再用 `sop-candidate run --policy fixed` 读取 oracle、生成问题 2 的结果并提交（命令行说明见 [考生操作手册](docs/candidate_manual.pdf)）。
-
-## 本次实训的大屏成绩
-
-考官返回的 `report.grades` 包括三项百分制成绩和总成绩：
-
-- 初始风险：`100 × (1 − sqrt(B_p))`。
-- 查询后风险：`clip(100 × (1 − (sqrt(B_q) + sqrt(B_r))/2 − ΔC), 0, 100)`。先分别换算 q 和 r 的 Brier 分数、求平均，再扣除新增调用费用，最低为 0 分。
-- 决策成绩：`clip(100 − 40 × (C − C_min) / (C_baseline − C_min), 0, 100)`；`C` 为业务域宏平均决策损失，`C_min = 377/7200`，`C_baseline = 5927/7200`。
-- 总成绩：三项等权平均。大屏首页取每位考生历史最高总成绩，详情榜显示最后一次已完成提交的成绩。
-
-`Δc_i` 是该题从冻结初始作答之后新增的工具和 oracle 费用；`ΔC` 先在每类业务的交互题中取平均，再对三类业务等权平均。当前每类 24 道交互题，所以 `ΔC` 等于 72 题新增费用之和除以 72。若 q/r 判断完全准确、每题新增费用均为 0.1，查询后风险成绩为 90 分。仅一道题花费 0.1 时，整项扣除约 0.1389 分。
-
-决策损失 `C` 继续包含冻结初始费用、新增调用费用和最终决策损失。同一笔调用只在账本中记录一次，第二、第三项都使用该记录计算各自的成绩。正式评分使用考官账本中的费用；每次有效提交将当时的费用汇总保存到 `report.query_costs`，之后继续查询不会把新的费用算回旧提交。重复上传同一 CSV 仍返回原提交结果。
-
-`report.grades` 返回本次提交的有效成绩（`scope="submission_with_best_initial"`）：
-
-- 初始风险分单独取最好：选择首次成功查询正式测试 oracle 之前，p 的 Brier 最低的提交；尚未查询时，新的提交仍可改善这项成绩。练习题 oracle 不触发锁定。
-- 查询后风险分和决策分都使用**本次提交**的答案、概率及当时的费用。
-- 将保留的 p 成绩与本次另外两项求平均，再将三项和总成绩发送给大屏。例如第 1 次三项为 90、80、80，总分 83.33；第 2 次 CSV 独立成绩为 50、20、50，则第 2 次有效成绩为 90、20、50，总分 53.33。详情榜显示第 2 次的 53.33，首页历史最高仍为 83.33。
-
-`initial_risk_locked` 表示 p 是否锁定，`initial_risk_source_submission` 表示 p 来自哪次提交；`interactive_source_submission` 为本次提交编号。历史记录只使用截至自身提交编号的 p 成绩及该次保存的费用，不混入后来的提交。
-
-每份 CSV 的原始细分指标继续保留，`report.submission_grades` 提供该份 CSV 独立换算的百分制成绩，其中 p 未应用历史择优和锁定，供分析当次结果；实际同步使用 `report.grades`。大屏总分用于排名，最终评价仍由教师结合细分指标、报告和答辩进行。
-
-学生只需向考官提交 CSV，成绩会自动同步到大屏。连接地址和个人 token 由助教另行发放。
-
-终端继续显示原始细分指标。需要查看或保存包含大屏成绩的完整报告时，可使用已有的 `--output` 参数：
+提交并保存完整报告，或仅查看历史：
 
 ```bash
 python scripts/run_test.py results.csv --output .runs/submission-report.json
 python scripts/run_test.py --submissions --output .runs/submission-history.json
 ```
 
-第一条提交 CSV，第二条仅查询历史，不消耗提交次数。
+第一条会提交 CSV，第二条只查询历史。`report.grades` 是本次有效成绩，`report.submission_grades` 是该份 CSV 独立换算的成绩；原始细分指标保留在报告中。
