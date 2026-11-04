@@ -1,6 +1,6 @@
 # SOP-UQ 学生项目
 
-项目介绍和操作说明见 [考生操作手册](docs/candidate_manual.pdf)。首次使用：准备好环境与连接信息，打开 [Quick Start Notebook](scripts/quick_start.ipynb)，用试用 token 跟着运行。
+项目介绍和操作说明见 [考生操作手册](docs/candidate_manual.pdf)。首次使用：准备好环境与连接信息，打开 [中文 Quick Start](scripts/quick_start_cn.ipynb)，用试用 token 跟着运行；也可选择 [英文版](scripts/quick_start.ipynb)。两版运行流程相同，选择一版即可。
 
 ## 文档导航
 
@@ -8,7 +8,7 @@
 | --- | --- |
 | [题面](docs/problem_statement.pdf) | 了解任务定义、研究目标和需要提交的结果 |
 | [考生操作手册](docs/candidate_manual.pdf) | 查看项目介绍、正式操作步骤、CSV 格式、工具与预算、业务规则和评分细则 |
-| [Quick Start Notebook](scripts/quick_start.ipynb) | 实际连接服务、查看数据、运行基线，再走一遍采集、拟合和提交流程 |
+| [中文 Quick Start](scripts/quick_start_cn.ipynb) / [英文版](scripts/quick_start.ipynb) | 实际连接服务、查看数据、运行基线，再走一遍采集、拟合和提交流程 |
 | [Baseline 示例](scripts/baseline_example.ipynb) | 跑通后，离线比较六种风险方法与转人工阈值；另附可选的模型部署说明 |
 
 ## 准备环境与连接
@@ -23,7 +23,7 @@ export SOP_EXAMINER_URL="助教提供的完整考官 URL"
 export SOP_EXAMINER_TOKEN="本队试用 token"
 export SOP_MODEL_URL="助教提供的完整模型 URL"
 export SOP_MODEL_TOKEN="模型 token"
-jupyter notebook scripts/quick_start.ipynb
+jupyter notebook scripts/quick_start_cn.ipynb
 ```
 
 试用 token 用于熟悉流程，测试提交只检查格式，不评分、不占正式提交次数；正式 token 用于计分。用正式 token 跑示例会占用后续提交次数。正式运行步骤见操作手册。
