@@ -1,6 +1,6 @@
 # SOP-UQ 学生项目
 
-先读 [题面](docs/problem_statement.pdf)与[快速上手](docs/quickstart.pdf)。服务协议 **3.0**，主数据格式 **2.1**。
+先读 [题面](docs/problem_statement.pdf)，准备好环境和连接信息后，打开 [Quick Start Notebook](scripts/quick_start.ipynb) 按步骤运行。预算、提交、业务规则和评分细则见 [考生操作手册](docs/candidate_manual.pdf)。服务协议 **3.0**，主数据格式 **2.1**。
 
 ## 安装与入口
 
@@ -10,7 +10,7 @@
 source conda_env.sh   # 首次按 environment.yml 创建 conda 环境 sii_uq（几分钟），以后只激活
 export SOP_EXAMINER_URL=http://<考官地址>:8801   SOP_EXAMINER_TOKEN=<本队试用 token>
 export SOP_MODEL_URL=http://<模型地址>:18080      SOP_MODEL_TOKEN=<模型 token>
-jupyter notebook scripts/test_example.ipynb
+jupyter notebook scripts/quick_start.ipynb
 ```
 
 每队有两个 token：试用 token 用于跑 notebook 示例、熟悉流程（测试题上只能做少量工具调用和 oracle 读取，提交只检查格式、不评分、不占次数，也不影响正式台账）；正式 token 用于正式运行和提交。
@@ -19,7 +19,7 @@ jupyter notebook scripts/test_example.ipynb
 
 | 入口 | 内容 |
 | --- | --- |
-| `scripts/test_example.ipynb` | 测试 notebook：连接、手动调用工具与 oracle、baseline 作答、采集与拟合、问题 1 与问题 2 的测试运行和提交（用试用 token） |
+| `scripts/quick_start.ipynb` | 快速上手教程：用试用 token 连接服务、查看数据、运行基线，再学习采集、拟合和提交流程 |
 | `scripts/baseline_example.ipynb` | 离线比较六种风险方法与转人工阈值；自行部署 Qwen |
 | `scripts/run_test.py` | 检查并提交 `results.csv`（`--local` 在本地为有标签结果评分，`--submissions` 查看已用次数） |
 | `sop-candidate` | 命令行：`collect`、`fit`、`run`、`score`、`submit` |
@@ -53,7 +53,7 @@ python scripts/prepare_labeled.py
 sop-candidate fit --data data --trajectories .runs/provided_initials --output .runs/provided_calibrator.json
 ```
 
-上述记录只有查询前轨迹。需要训练查询后的风险模型时，仍需按快速上手采集有标签题的查询后轨迹。
+上述记录只有查询前轨迹。需要训练查询后的风险模型时，仍需按 [Quick Start Notebook](scripts/quick_start.ipynb) 采集有标签题的查询后轨迹。
 
 | `domain` | 答案字段 |
 | --- | --- |
@@ -89,7 +89,7 @@ sop-candidate fit --data data --trajectories .runs/provided_initials --output .r
 
 测试题的工具和 oracle 费用记在本队台账中，换方法或重跑不会清零，所以比较方法请在有标签题上进行。评分反馈只用于评估自己的方法，不得用来推断测试标签；试用 token 读到的测试题真值只用于熟悉流程，不得用于正式提交。
 
-最快的完整流程：`sop-candidate collect --policy fixed` 一次采集有标签题的初始与查询后轨迹，`sop-candidate fit` 拟合两类风险，`sop-candidate run --policy threshold` 生成问题 1 的测试结果并用 `python scripts/run_test.py` 提交，再用 `sop-candidate run --policy fixed` 读取 oracle、生成问题 2 的结果并提交（见快速上手）。
+最快的完整流程：`sop-candidate collect --policy fixed` 一次采集有标签题的初始与查询后轨迹，`sop-candidate fit` 拟合两类风险，`sop-candidate run --policy threshold` 生成问题 1 的测试结果并用 `python scripts/run_test.py` 提交，再用 `sop-candidate run --policy fixed` 读取 oracle、生成问题 2 的结果并提交（命令行说明见 [考生操作手册](docs/candidate_manual.pdf)）。
 
 ## 本次实训的大屏成绩
 
